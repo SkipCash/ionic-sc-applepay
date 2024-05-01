@@ -13,24 +13,22 @@ npx cap sync
 
 <docgen-index>
 
-* [`echo(...)`](#echo)
+* [`loadSCPGW(...)`](#loadscpgw)
 
 </docgen-index>
 
 <docgen-api>
 <!--Update the source file JSDoc comments and rerun docgen to update the docs below-->
 
-### echo(...)
+### loadSCPGW(...)
 
 ```typescript
-echo(options: { value: string; }) => Promise<{ value: string; }>
+loadSCPGW(options: { payUrl: string; paymentTitle: string; returnURL: string; }) => void
 ```
 
-| Param         | Type                            |
-| ------------- | ------------------------------- |
-| **`options`** | <code>{ value: string; }</code> |
-
-**Returns:** <code>Promise&lt;{ value: string; }&gt;</code>
+| Param         | Type                                                                      |
+| ------------- | ------------------------------------------------------------------------- |
+| **`options`** | <code>{ payUrl: string; paymentTitle: string; returnURL: string; }</code> |
 
 --------------------
 

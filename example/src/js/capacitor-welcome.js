@@ -1,5 +1,7 @@
 import { SplashScreen } from '@capacitor/splash-screen';
-import { Camera } from '@capacitor/camera';
+
+import { loadSCPGW } from '../../../src/index';
+
 
 window.customElements.define(
   'capacitor-welcome',
@@ -15,15 +17,20 @@ window.customElements.define(
     <style>
       :host {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-        display: block;
+        display: flex;
+        justify-content: center;
+        align-items: center;
         width: 100%;
-        height: 100%;
+        height: 100vh; /* Use viewport height to fill the entire screen */
+        margin: 0; /* Remove default margin */
+        padding: 0; /* Remove default padding */
       }
+      
       h1, h2, h3, h4, h5 {
         text-transform: uppercase;
       }
+      
       .button {
-        display: inline-block;
         padding: 10px;
         background-color: #73B5F6;
         color: #fff;
@@ -33,81 +40,35 @@ window.customElements.define(
         text-decoration: none;
         cursor: pointer;
       }
-      main {
-        padding: 15px;
-      }
-      main hr { height: 1px; background-color: #eee; border: 0; }
-      main h1 {
-        font-size: 1.4em;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-      }
-      main h2 {
-        font-size: 1.1em;
-      }
-      main h3 {
-        font-size: 0.9em;
-      }
-      main p {
-        color: #333;
-      }
-      main pre {
-        white-space: pre-line;
-      }
+      
     </style>
     <div>
-      <capacitor-welcome-titlebar>
-        <h1>Capacitor</h1>
-      </capacitor-welcome-titlebar>
       <main>
         <p>
-          Capacitor makes it easy to build powerful apps for the app stores, mobile web (Progressive Web Apps), and desktop, all
-          with a single code base.
-        </p>
-        <h2>Getting Started</h2>
-        <p>
-          You'll probably need a UI framework to build a full-featured app. Might we recommend
-          <a target="_blank" href="http://ionicframework.com/">Ionic</a>?
+          <button class="button" id="start-payment">Start Payment</button>
         </p>
         <p>
-          Visit <a href="https://capacitorjs.com">capacitorjs.com</a> for information
-          on using native features, building plugins, and more.
-        </p>
-        <a href="https://capacitorjs.com" target="_blank" class="button">Read more</a>
-        <h2>Tiny Demo</h2>
-        <p>
-          This demo shows how to call Capacitor plugins. Say cheese!
-        </p>
-        <p>
-          <button class="button" id="take-photo">Take Photo</button>
-        </p>
-        <p>
-          <img id="image" style="max-width: 100%">
+          <button class="button" id="launch-webview">Launch WebView</button>
         </p>
       </main>
     </div>
     `;
     }
 
-    connectedCallback() {
+    async connectedCallback() {
       const self = this;
 
-      self.shadowRoot.querySelector('#take-photo').addEventListener('click', async function (e) {
-        try {
-          const photo = await Camera.getPhoto({
-            resultType: 'uri',
-          });
-
-          const image = self.shadowRoot.querySelector('#image');
-          if (!image) {
-            return;
-          }
-
-          image.src = photo.webPath;
-        } catch (e) {
-          console.warn('User cancelled', e);
+      
+      self.shadowRoot.querySelector('#launch-webview').addEventListener(
+        'click', function (e) {
+          loadSCPGW(
+            "https://skipcashtest.azurewebsites.net/pay/bf52e849-0d5c-43ad-9f39-c64e95d7eb42", // payUrl
+            "Protection Checkout", // WebModal Title
+            "https://www.wasim.wiki/?wc-api=wc_gateway_skipcash_check" // Return URL as it configured in Merchant Portal
+          )
         }
-      });
+      )
+
     }
   }
 );
