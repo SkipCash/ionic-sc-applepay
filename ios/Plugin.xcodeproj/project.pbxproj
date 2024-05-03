@@ -268,8 +268,8 @@
 			);
 			inputPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-PluginTests/Pods-PluginTests-frameworks.sh",
-				"${BUILT_PRODUCTS_DIR}/Capacitor/Capacitor.framework",
-				"${BUILT_PRODUCTS_DIR}/CapacitorCordova/Cordova.framework",
+				"${BUILT_PRODUCTS_DIR}/Capacitor-iOS17.0/Capacitor.framework",
+				"${BUILT_PRODUCTS_DIR}/CapacitorCordova-iOS17.0/Cordova.framework",
 			);
 			name = "[CP] Embed Pods Frameworks";
 			outputPaths = (

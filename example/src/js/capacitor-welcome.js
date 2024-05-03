@@ -62,9 +62,9 @@ window.customElements.define(
       self.shadowRoot.querySelector('#launch-webview').addEventListener(
         'click', function (e) {
           loadSCPGW(
-            "https://skipcashtest.azurewebsites.net/pay/bf52e849-0d5c-43ad-9f39-c64e95d7eb42", // payUrl
-            "Protection Checkout", // WebModal Title
-            "https://www.wasim.wiki/?wc-api=wc_gateway_skipcash_check" // Return URL as it configured in Merchant Portal
+            "", // payUrl (pass the payment link here)
+            "", // WebModal Title
+            "" // Return URL as it configured in Merchant Portal
           )
         }
       )
