@@ -1,7 +1,26 @@
 import { SplashScreen } from '@capacitor/splash-screen';
 
-import { loadSCPGW } from '../../../src/index';
+import {  ScApplePay, loadSCPGW, initiatePayment, PaymentData, isWalletHasCards } from '../../../src/index';
 
+ScApplePay.addListener(
+  'payment_finished_webview_closed', () => {
+    console.log("payment webview close success/failed");
+    // after the webview closes it will trigger 'payment_finished_webview_closed' event
+    // then you can check the payment id to see if the customer paid or not
+  }
+);
+
+ScApplePay.addListener(
+  'applepay_response', (data) => {
+    const response = JSON.parse(data);
+    console.log(response);
+    // Handle payment response here...
+    // you can get the payment details using the payment id after successful payment request.
+    // send a GET request to SkipCash server /api/v1/payments/${paymentResponse.paymentId} and include your merchant
+    // client id in the authorization header request to get the payment details.
+    // for more details please refer to https://dev.skipcash.app/doc/api-integration/ 
+  }
+);
 
 window.customElements.define(
   'capacitor-welcome',
@@ -58,12 +77,57 @@ window.customElements.define(
     async connectedCallback() {
       const self = this;
 
+      self.shadowRoot.querySelector('#start-payment').addEventListener(
+        'click', async function (e) {
+          // initiate a new apple pay payment
+          const paymentData = new PaymentData();
+          paymentData.setEmail("example@example.com"); // mandatory
+          paymentData.setAmount("1.00"); // mandatory
+          paymentData.setFirstName("Skip"); // mandatory
+          paymentData.setLastName("Cash"); // mandatory
+          paymentData.setPhone("+97400000001"); // mandatory
+
+          // here pass the name of the merchant identifier(you need to create a new one
+          paymentData.setMerchantIdentifier("");            
+          // from apple developer account of ur app ). 
+          // please reachout to us on support@skipcash.com to get the manual that explains how
+          // to generate your merchant identifier and to sign it with us to be able to use applepay
+
+          /*
+            // add your payment end point - you should create ur own endpoint for your merchant account
+            // PLEASE REFER TO https://dev.skipcash.app/doc/api-integration/ for more information
+            // on how to request a new payment (payment link) you need to implement that for your 
+            // backend server to create endpoint to request a new payment and return the details 
+            // you receive from skipcash server this package will use this endpoint to process your
+            // customer payment using applepay. when u complete setuping & testing ur endpoint
+            // please pass the link to below setPaymentLinkEndPoint //// method.
+          */
+          paymentData.setPaymentLinkEndPoint("");
+
+          // paymentData.setAuthorizationHeader("");
+          // set your endpoint authorizartion header, used to protect your endpoint from unauthorized access 
+
+          paymentData.setSummaryItem("Total", `${paymentData.getAmount()}`); // Add payment summary item(s)
+          
+
+          const hasCards = await isWalletHasCards();
+
+          if(hasCards){
+            initiatePayment(paymentData);
+          }else{
+            // If no cards found, prompt user to setup new card
+            setupNewCard();
+          }
+
+        }
+      )
       
+      // Use WebView To Make Payment
       self.shadowRoot.querySelector('#launch-webview').addEventListener(
         'click', function (e) {
           loadSCPGW(
             "", // payUrl (pass the payment link here)
-            "", // WebModal Title
+            "Test", // WebModal Title
             "" // Return URL as it configured in Merchant Portal
           )
         }

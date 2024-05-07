@@ -13,12 +13,48 @@ npx cap sync
 
 <docgen-index>
 
+* [`initiatePayment(...)`](#initiatepayment)
+* [`isWalletHasCards()`](#iswallethascards)
+* [`setupNewCard()`](#setupnewcard)
 * [`loadSCPGW(...)`](#loadscpgw)
 
 </docgen-index>
 
 <docgen-api>
 <!--Update the source file JSDoc comments and rerun docgen to update the docs below-->
+
+### initiatePayment(...)
+
+```typescript
+initiatePayment(options: { paymentData: string; }) => void
+```
+
+| Param         | Type                                  |
+| ------------- | ------------------------------------- |
+| **`options`** | <code>{ paymentData: string; }</code> |
+
+--------------------
+
+
+### isWalletHasCards()
+
+```typescript
+isWalletHasCards() => Promise<{ value: boolean; }>
+```
+
+**Returns:** <code>Promise&lt;{ value: boolean; }&gt;</code>
+
+--------------------
+
+
+### setupNewCard()
+
+```typescript
+setupNewCard() => void
+```
+
+--------------------
+
 
 ### loadSCPGW(...)
 

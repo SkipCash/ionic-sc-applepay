@@ -3,6 +3,7 @@ import PassKit
 import SkipCashSDK
 import Foundation
 import WebKit
+import Capacitor
 
 public class PaymentData: NSObject, Codable{
     let merchantIdentifier: String
@@ -51,41 +52,44 @@ public class PaymentData: NSObject, Codable{
 
 @objc public class ScApplePay: NSObject, ApplePayReponseDelegate {
     private var paymentData: PaymentData?
+    private var scApplePlugin: ScApplePayPlugin?
+    private var eventSent = false
     let webConfiguration = WKWebViewConfiguration()
     var webView: WKWebView!
     var navigationController: UINavigationController?
     var returnURL: String?
     
     public func applePayResponseData(paymentId: String, isSuccess: Bool, token: String, returnCode: Int, errorMessage: String) {
+        
+        
+        if !eventSent{
+            eventSent = true
+            guard let windowScene = UIApplication.shared.connectedScenes
+                .compactMap({ $0 as? UIWindowScene })
+                .first(where: { $0.activationState == .foregroundActive }),
+                let window = windowScene.windows.first(where: { $0.isKeyWindow }) else {
+                
+            return
+            }
 
-        guard let windowScene = UIApplication.shared.connectedScenes
-            .compactMap({ $0 as? UIWindowScene })
-            .first(where: { $0.activationState == .foregroundActive }),
-            let window = windowScene.windows.first(where: { $0.isKeyWindow }) else {
+            var viewController = window.rootViewController
+            while let presentedViewController = viewController?.presentedViewController {
+            viewController = presentedViewController
+            }
             
-        return
+            viewController?.dismiss(animated: true, completion: nil)
+
+            let responseData: [String: Any] = [
+            "paymentId": paymentId,
+            "isSuccess": isSuccess,
+            "token": token,
+            "returnCode": returnCode,
+            "errorMessage": errorMessage
+            ]
+            
+            scApplePlugin?.applePayResponse(applePayResponse: responseData)
         }
 
-        var viewController = window.rootViewController
-        while let presentedViewController = viewController?.presentedViewController {
-        viewController = presentedViewController
-        }
-        
-        viewController?.dismiss(animated: true, completion: nil)
-
-        let responseData: [String: Any] = [
-        "paymentId": paymentId,
-        "isSuccess": isSuccess,
-        "token": token,
-        "returnCode": returnCode,
-        "errorMessage": errorMessage
-        ]
-
-        let  eventEmitter  =   ScApplePayPlugin()
-        
-//        eventEmitter.sendEventToJs(responseData)
-
-        // sendEvent(withName: "applepay_response", body: responseData)
     }
 
     @IBOutlet weak var applePayView: UIView!
@@ -133,7 +137,9 @@ public class PaymentData: NSObject, Codable{
         }
     }
 
-    @objc func initiatePayment(jsonString: String){
+    @objc func initiatePayment(ob: ScApplePayPlugin, jsonString: String){
+        eventSent = false
+        scApplePlugin = ob
       if let jsonData = jsonString.data(using: .utf8) {
        do {
                // Convert JSON data to a dictionary
@@ -320,12 +326,12 @@ class CustomPresentationController: UIPresentationController {
     }
 }
 
-
 extension ScApplePay: WKNavigationDelegate {
   
     // Your other methods...
 
-    @objc func loadSCPGW(url: String, paymentTitle: String, returnURL: String) {
+    @objc func loadSCPGW(url: String, paymentTitle: String, returnURL: String, pluginInstance :ScApplePayPlugin) {
+        scApplePlugin = pluginInstance
         DispatchQueue.main.async {
             self.returnURL = returnURL
             
@@ -382,6 +388,7 @@ extension ScApplePay: WKNavigationDelegate {
     @objc func goBack() {
         DispatchQueue.main.async {
             if let topViewController = UIApplication.shared.keyWindow?.rootViewController?.topMostViewController() {
+                self.scApplePlugin?.paymentFinished()
                 topViewController.dismiss(animated: true, completion: nil)
             } else {
                 debugPrint("Unable to find top view controller")
