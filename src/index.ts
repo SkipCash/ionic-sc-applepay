@@ -5,7 +5,7 @@ import { ScApplePayPlugin, PaymentData } from './definitions'; //PaymentData
 
 const ScApplePay = registerPlugin<ScApplePayPlugin>(
   'ScApplePay', {
-    web: () => import('./web').then(m => new m.ScApplePayWeb()),
+    // web: () => import('./web').then(m => new m.ScApplePayWeb()),
   }
 );
 
