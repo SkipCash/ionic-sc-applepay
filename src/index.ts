@@ -16,7 +16,7 @@ const initiatePayment = (paymentData: PaymentData) => {
 }
 
 const isWalletHasCards = async () => {
-  const result = ScApplePay.isWalletHasCards()
+  const result = (await ScApplePay.isWalletHasCards()).value;
 
   return result;
 }
