@@ -6,8 +6,11 @@ SkipCash ApplePay Ionic Plugin; The plugin facilitates SkipCash Apple Pay integr
 
 ```bash
 npm install sc-applepay
-npx cap sync
+npx cap sync ios
 ```
+
+# Example (capacitor)
+LINK -> https://github.com/SkipCash/ionic-sc-applepay/blob/main/example/src/js/capacitor-welcome.js
 
 ## API
 
