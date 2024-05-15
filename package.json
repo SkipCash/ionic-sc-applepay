@@ -1,6 +1,6 @@
 {
   "name": "sc-applepay",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "SkipCash ApplePay Ionic Plugin; The plugin facilitates SkipCash Apple Pay integration within your ionic app.",
   "main": "dist/plugin.cjs.js",
   "module": "dist/esm/index.js",

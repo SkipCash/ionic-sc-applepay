@@ -7,8 +7,15 @@ def capacitor_pods
   pod 'CapacitorCordova', :path => '../node_modules/@capacitor/ios'
 end
 
+def skipcashsdk_pod
+  # Comment the next line if you're not using Swift and don't want to use dynamic frameworks
+  use_frameworks!
+  pod 'SkipCashSDK', :path => './Plugin/Frameworks/SkipCashSDK.xcframework'
+end
+
 target 'Plugin' do
   capacitor_pods
+  skipcashsdk_pod
 end
 
 target 'PluginTests' do

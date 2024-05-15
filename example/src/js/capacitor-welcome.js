@@ -10,6 +10,7 @@ ScApplePay.addListener(
   }
 );
 
+
 ScApplePay.addListener(
   'applepay_response', (data) => {
     const response = JSON.parse(data);
@@ -76,7 +77,6 @@ window.customElements.define(
 
     async connectedCallback() {
       const self = this;
-
       self.shadowRoot.querySelector('#start-payment').addEventListener(
         'click', async function (e) {
           // initiate a new apple pay payment
@@ -86,7 +86,6 @@ window.customElements.define(
           paymentData.setFirstName("Skip"); // mandatory
           paymentData.setLastName("Cash"); // mandatory
           paymentData.setPhone("+97400000001"); // mandatory
-
           // here pass the name of the merchant identifier(you need to create a new one
           paymentData.setMerchantIdentifier("");            
           // from apple developer account of ur app ). 
@@ -109,30 +108,15 @@ window.customElements.define(
 
           paymentData.setSummaryItem("Total", `${paymentData.getAmount()}`); // Add payment summary item(s)
           
-
           const hasCards = await isWalletHasCards();
-
           if(hasCards){
             initiatePayment(paymentData);
           }else{
             // If no cards found, prompt user to setup new card
             setupNewCard();
           }
-
         }
       )
-      
-      // Use WebView To Make Payment
-      self.shadowRoot.querySelector('#launch-webview').addEventListener(
-        'click', function (e) {
-          loadSCPGW(
-            "", // payUrl (pass the payment link here)
-            "Test", // WebModal Title
-            "" // Return URL as it configured in Merchant Portal
-          )
-        }
-      )
-
     }
   }
 );
