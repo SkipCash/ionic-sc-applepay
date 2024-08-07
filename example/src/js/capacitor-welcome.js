@@ -77,6 +77,7 @@ window.customElements.define(
 
     async connectedCallback() {
       const self = this;
+      
       self.shadowRoot.querySelector('#start-payment').addEventListener(
         'click', async function (e) {
           // initiate a new apple pay payment
@@ -87,7 +88,7 @@ window.customElements.define(
           paymentData.setLastName("Cash"); // mandatory
           paymentData.setPhone("+97400000001"); // mandatory
           // here pass the name of the merchant identifier(you need to create a new one
-          paymentData.setMerchantIdentifier("");            
+          paymentData.setMerchantIdentifier("");      
           // from apple developer account of ur app ). 
           // please reachout to us on support@skipcash.com to get the manual that explains how
           // to generate your merchant identifier and to sign it with us to be able to use applepay
@@ -106,6 +107,18 @@ window.customElements.define(
           // paymentData.setAuthorizationHeader("");
           // set your endpoint authorizartion header, used to protect your endpoint from unauthorized access 
 
+          //optional
+          /*
+            set transaction id (your system internal id assigned to specific transaction), 
+            To track down a certain transaction, each transaction id should be unique.
+          */
+          paymentData.setTransactionId(""); //
+          //optional
+          /*
+           Get each client payment details instantly after they make the payment directly to your server endpoint.
+          */
+          paymentData.setWebhookUrl(""); 
+
           paymentData.setSummaryItem("Total", `${paymentData.getAmount()}`); // Add payment summary item(s)
           
           const hasCards = await isWalletHasCards();
@@ -115,6 +128,12 @@ window.customElements.define(
             // If no cards found, prompt user to setup new card
             setupNewCard();
           }
+        }
+      )
+
+      self.shadowRoot.querySelector("#launch-webview").addEventListener(
+        'click', function(e){
+          loadSCPGW("", "", "");
         }
       )
     }

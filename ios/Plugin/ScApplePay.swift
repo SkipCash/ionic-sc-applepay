@@ -58,36 +58,36 @@ public class PaymentData: NSObject, Codable{
     var webView: WKWebView!
     var navigationController: UINavigationController?
     var returnURL: String?
+    private var paymentID: String = ""
+    private var transactionID: String = ""
     
-    public func applePayResponseData(paymentId: String, isSuccess: Bool, token: String, returnCode: Int, errorMessage: String) {
+    public func applePayResponseData(transactionID: String, paymentID: String, isSuccess: Bool, token: String, returnCode: Int, errorMessage: String, completion: ((PKPaymentAuthorizationResult) -> Void)?) {
         
         
         if !eventSent{
             eventSent = true
-            guard let windowScene = UIApplication.shared.connectedScenes
-                .compactMap({ $0 as? UIWindowScene })
-                .first(where: { $0.activationState == .foregroundActive }),
-                let window = windowScene.windows.first(where: { $0.isKeyWindow }) else {
-                
-            return
-            }
-
-            var viewController = window.rootViewController
-            while let presentedViewController = viewController?.presentedViewController {
-            viewController = presentedViewController
-            }
-            
-            viewController?.dismiss(animated: true, completion: nil)
 
             let responseData: [String: Any] = [
-            "paymentId": paymentId,
-            "isSuccess": isSuccess,
-            "token": token,
-            "returnCode": returnCode,
-            "errorMessage": errorMessage
+                "transactionId": transactionID,
+                "paymentId": paymentID,
+                "isSuccess": isSuccess,
+                "token": token,
+                "returnCode": returnCode,
+                "errorMessage": errorMessage
             ]
+
+            if (isSuccess) {
+                let errors = [Error]()
+                let status = PKPaymentAuthorizationStatus.success
+                self.paymentStatus = status
+                completion?(PKPaymentAuthorizationResult(status: status, errors: errors))
+            }else{
+                let errors = [Error]()
+                let status = PKPaymentAuthorizationStatus.failure
+                completion?(PKPaymentAuthorizationResult(status: status, errors: errors))
+            }
             
-            scApplePlugin?.applePayResponse(applePayResponse: responseData)
+            self.scApplePlugin?.applePayResponse(applePayResponse: responseData)
         }
 
     }
@@ -137,6 +137,93 @@ public class PaymentData: NSObject, Codable{
         }
     }
 
+    func getPaymentID(authorizationHeader: String, data: [String: Any], createPaymentApi: String, completion: @escaping (String?) -> Void) {
+        
+        var convertedData: [String: Any] = [:]
+        
+        convertedData["Amount"]          = data["amount"]
+        convertedData["FirstName"]       = data["firstName"]
+        convertedData["LastName"]        = data["lastName"]
+        convertedData["Phone"]           = data["phone"]
+        convertedData["Email"]           = data["email"]
+        
+
+        if let transactionId = data["transactionId"] as? String, !transactionId.isEmpty {
+            convertedData["TransactionId"] = transactionId
+            self.transactionID = transactionId
+        }else{
+            self.transactionID = ""
+        }
+
+        if let webhookUrl = data["webhookUrl"] as? String, !webhookUrl.isEmpty {
+            convertedData["webhookUrl"] = data["webhookUrl"]
+        }
+        
+        guard let jsonData = try? JSONSerialization.data(withJSONObject: convertedData) else {
+            completion(nil)
+            return
+        }
+        
+        var request = URLRequest(url: URL(string: createPaymentApi)!, timeoutInterval: 30)
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        if authorizationHeader.count > 0 {
+            request.addValue(authorizationHeader, forHTTPHeaderField: "Authorization")
+        }
+        
+        request.httpMethod = "POST"
+        request.httpBody = jsonData
+    
+        
+        let task = URLSession.shared.dataTask(with: request) { data, response, error in
+            guard let data = data else {
+                if let error = error {
+                    debugPrint("Error: \(error.localizedDescription)")
+                    let responseData: [String: Any] = [
+                        "transactionId": "",
+                        "paymentId": "",
+                        "isSuccess": false,
+                        "token": "",
+                        "returnCode": 400,
+                        "errorMessage": "\(error.localizedDescription)"
+                    ]
+                    
+                    self.scApplePlugin?.applePayResponse(applePayResponse: responseData)
+
+                    completion(nil)
+                    return
+                }
+                return
+            }
+            
+            do {
+                let json = try JSONSerialization.jsonObject(with: data, options: [])
+                if let tempResponse = json as? [String: Any],
+                   let responseObj = tempResponse["resultObj"] as? [String: Any],
+                   let paymentID = responseObj["id"] as? String {
+                    completion(paymentID)
+                    return
+                }
+            } catch {
+                debugPrint("Error: \(error.localizedDescription)")
+                let responseData: [String: Any] = [
+                    "transactionId": "",
+                    "paymentId": "",
+                    "isSuccess": false,
+                    "token": "",
+                    "returnCode": 400,
+                    "errorMessage": "\(error.localizedDescription)"
+                ]
+                
+                self.scApplePlugin?.applePayResponse(applePayResponse: responseData)
+                completion(nil)
+                return
+            }
+        }
+        
+        task.resume()
+    }
+
     @objc func initiatePayment(ob: ScApplePayPlugin, jsonString: String){
         eventSent = false
         scApplePlugin = ob
@@ -145,41 +232,50 @@ public class PaymentData: NSObject, Codable{
                // Convert JSON data to a dictionary
            if let paymentDictionary = try JSONSerialization.jsonObject(with: jsonData, options: []) as? [String: Any] {
               if let paymentData = PaymentData(data: paymentDictionary) {
-                  self.startPayment(data: paymentData){
-                       (success) in
-                           if success {
-//                               print("Success")
-                           }else {
-//                               print("Failur")
-                           }
-                       }
-                   } else {
-                       print("Error: Unable to initialize PaymentData object")
-                   }
+                  getPaymentID(authorizationHeader: paymentData.authorizationHeader, data: paymentDictionary, createPaymentApi: paymentData.createPaymentLinkEndPoint) { paymentID in
+                      guard let paymentID = paymentID else {
+                          // handle error event
+                          debugPrint("Failed to get new payment ID")
+                          
+                          return
+                      }
+                      self.startPayment(data: paymentData, paymentID: paymentID){ success in
+                          if success {
+                              //                               print("Success")
+                          }else {
+                              //                               print("Failed")
+                          }
+                      }
+                    }
+                  } else {
+                      debugPrint("Error: Unable to initialize PaymentData object")
+                  }
                } else {
-                   print("Error: Unable to parse JSON data into dictionary")
+                   debugPrint("Error: Unable to parse JSON data into dictionary")
                }
            } catch {
-               print("Error: \(error)")
+               debugPrint("Error: \(error)")
            }
        } else {
-           print("Error: Unable to convert JSON string to data")
+           debugPrint("Error: Unable to convert JSON string to data")
        }
     }
 
 
-    func startPayment(data: PaymentData, completion: @escaping PaymentCompletionHandler) {
+    func startPayment(data: PaymentData,  paymentID: String, completion: @escaping PaymentCompletionHandler) {
             
         completionHandler = completion
         
         paymentData = data
+        
+        self.paymentID = paymentID
         
         var paymentSummaryItems = [PKPaymentSummaryItem]()
 
         for (label, amountString) in data.summaryItems {
             guard let amount = Decimal(string: amountString) else {
                 // Handle invalid amount string
-                print("Invalid amount string: \(amountString)")
+                debugPrint("Invalid amount string: \(amountString)")
                 continue
             }
 
@@ -224,75 +320,63 @@ extension ScApplePay: PKPaymentAuthorizationControllerDelegate {
 
   public func paymentAuthorizationController(_ controller: PKPaymentAuthorizationController, didAuthorizePayment payment: PKPayment, handler completion: @escaping (PKPaymentAuthorizationResult) -> Void) {
 
-    let errors = [Error]()
-    let status = PKPaymentAuthorizationStatus.success
+      let errors = [Error]()
+      let status = PKPaymentAuthorizationStatus.success
 
-    var sign = ""
-    
-    do {
+      var token = ""
+      
+      do {
         if let jsonResponse = try JSONSerialization.jsonObject(with: payment.token.paymentData, options: []) as? [String: Any] {
-            sign = String(decoding: payment.token.paymentData, as: UTF8.self)
+            token = String(decoding: payment.token.paymentData, as: UTF8.self)
         } else {
-            print("error")
+           debugPrint("Failed to get applepay token")
+            
+
+           let errors = [Error]()
+           let status = PKPaymentAuthorizationStatus.failure
+           
+           self.paymentStatus = status
+           completion(PKPaymentAuthorizationResult(status: status, errors: errors))
+            
+            let responseData: [String: Any] = [
+                 "transactionId": "",
+                 "paymentId": "",
+                 "isSuccess": false,
+                 "token": "",
+                 "returnCode": 400,
+                 "errorMessage": "Failed to get applepay token"
+             ]
+             
+             self.scApplePlugin?.applePayResponse(applePayResponse: responseData)
         }
-    } catch {
-        print("error converting payment token")
-    }
+      } catch {
+        debugPrint("error converting payment token")
 
-   let podBundle  = Bundle(for: SetupVC.self)
-
-    let customer_data = CustomerPaymentData(
-        phone: self.paymentData!.phone,
-        email: self.paymentData!.email,
-        firstName: self.paymentData!.firstName,
-        lastName: self.paymentData!.lastName,
-        amount: self.paymentData!.amount
-    )
-
-    let storyboard = UIStoryboard(name: "main", bundle: podBundle)
-
-    if let vc = storyboard.instantiateViewController(withIdentifier: "SetupVC") as? SetupVC,
-      let topViewController = UIApplication.shared.keyWindow?.rootViewController?.topMostViewController(){
-      vc.modalPresentationStyle = .overCurrentContext
-      vc.paymentData = customer_data
-      vc.appBackendServerEndPoint = self.paymentData!.createPaymentLinkEndPoint
-      
-      if !self.paymentData!.authorizationHeader.isEmpty {
-          vc.authorizationHeader      = self.paymentData!.authorizationHeader
-      }else{
-          vc.authorizationHeader = ""
+        let errors = [Error]()
+        let status = PKPaymentAuthorizationStatus.failure
+        
+        self.paymentStatus = status
+        completion(PKPaymentAuthorizationResult(status: status, errors: errors))
       }
-      
-      vc.delegate = self
-      vc.paymentToken = sign
-      topViewController.modalPresentationStyle = .overCurrentContext
-      topViewController.present(vc, animated: true, completion: nil)
-    }
+
+      let podBundle  = Bundle(for: SetupVC.self)
+
+
+      let storyboard = UIStoryboard(name: "main", bundle: podBundle)
 
       let vc = SetupVC()
-
-      // Set properties of vc
+      
       vc.modalPresentationStyle = .overCurrentContext
-      vc.paymentData = customer_data
-      vc.appBackendServerEndPoint = self.paymentData!.createPaymentLinkEndPoint
-
-      if !self.paymentData!.authorizationHeader.isEmpty {
-        vc.authorizationHeader = self.paymentData!.authorizationHeader
-      } else {
-        vc.authorizationHeader = ""
-      }
-
-      vc.delegate = self
-      vc.paymentToken = sign
+      vc.delegate               = self
+      vc.transactionId          = self.transactionID
+      vc.paymentID              = self.paymentID
+      vc.completion             = completion
+      vc.paymentToken           = token
 
       if let topViewController = UIApplication.shared.keyWindow?.rootViewController?.topMostViewController() {
-        // Present vc
-        topViewController.modalPresentationStyle = .overCurrentContext
-        topViewController.present(vc, animated: true, completion: nil)
+          topViewController.modalPresentationStyle = .overCurrentContext
+          topViewController.present(vc, animated: true, completion: nil)
       }
-
-      self.paymentStatus = status
-      completion(PKPaymentAuthorizationResult(status: status, errors: errors))
   }
 
   public func paymentAuthorizationControllerDidFinish(_ controller: PKPaymentAuthorizationController) {
@@ -328,8 +412,6 @@ class CustomPresentationController: UIPresentationController {
 
 extension ScApplePay: WKNavigationDelegate {
   
-    // Your other methods...
-
     @objc func loadSCPGW(url: String, paymentTitle: String, returnURL: String, pluginInstance :ScApplePayPlugin) {
         scApplePlugin = pluginInstance
         DispatchQueue.main.async {
@@ -397,6 +479,7 @@ extension ScApplePay: WKNavigationDelegate {
     }
 
 }
+        
 
 extension UIViewController {
   func topMostViewController() -> UIViewController {

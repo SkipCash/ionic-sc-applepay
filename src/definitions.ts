@@ -26,6 +26,9 @@ export class PaymentData implements PaymentDataInerface {
   private amount: string = '';
   private phone: string = '';
   private email: string = '';
+  private transactionId: string = '';
+  private webhookUrl: string = '';
+
   summaryItems: {[key: string]: string} = {};
 
   getCurrencyCode(): string{
@@ -114,6 +117,22 @@ export class PaymentData implements PaymentDataInerface {
 
   getEmail(): string{
     return this.email;
+  }
+
+  setTransactionId(tid: string){
+    this.transactionId = tid;
+  }
+
+  getTransactionId(): string{
+    return this.transactionId;
+  }
+
+  setWebhookUrl(wh: string){
+    this.webhookUrl = wh;
+  }
+
+  getWebhookUrl(): string{
+    return this.webhookUrl;
   }
 
 
